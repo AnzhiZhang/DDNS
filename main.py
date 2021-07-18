@@ -15,10 +15,10 @@ class Config:
         self.path = 'config.json'
         self.default = {
             'IPV6': True,
-            'AccessKeyID': 'AccessKeyID',
-            'AccessKeySecret': 'AccessKeySecret',
-            'Domain': 'Domain',
-            'RR': 'RR'
+            'AccessKeyID': '',
+            'AccessKeySecret': '',
+            'Domain': '',
+            'RR': ''
         }
         self.data = None
         self._check()
