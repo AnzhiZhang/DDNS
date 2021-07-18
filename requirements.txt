@@ -1,0 +1,2 @@
+requests
+aliyun-python-sdk-alidns
