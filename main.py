@@ -62,7 +62,7 @@ def get_ip(ipv6=False):
         return requests.get('https://api4.ipify.org/?format=json').json()['ip']
 
 
-def get_old_record(domain: str, client: AcsClient):
+def get_old_record(domain: str, RR: str, client: AcsClient):
     request = DescribeDomainRecordsRequest.DescribeDomainRecordsRequest()
     request.set_accept_format('json')
 
@@ -70,7 +70,7 @@ def get_old_record(domain: str, client: AcsClient):
 
     response = client.do_action_with_exception(request)
     for i in json.loads(response)['DomainRecords']['Record']:
-        if i['RR'] == 'home':
+        if i['RR'] == RR:
             return i
 
 
@@ -78,7 +78,7 @@ def main():
     config = Config()
     client = AcsClient(config['AccessKeyID'], config['AccessKeySecret'])
 
-    old_record = get_old_record(config['Domain'], client)
+    old_record = get_old_record(config['Domain'], config['RR'], client)
     ip = get_ip(config['IPV6'])
     if old_record['Value'] == ip:
         print('No changed')
