@@ -18,10 +18,6 @@ python main.py
 
 ## 配置
 
-### IPV6
-
-是否使用 ipv6
-
 ### AccessKeyID
 
 阿里云 AccessKeyID
@@ -34,6 +30,15 @@ python main.py
 
 域名
 
-### RR
+### Records
 
-主机记录
+主机记录名称与类型
+
+参考以下格式：
+
+```json
+{
+  "RR": "www",
+  "Type": "A"
+}
+```

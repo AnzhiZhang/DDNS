@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import json
+from typing import List
 
 import requests
 from aliyunsdkcore.client import AcsClient
@@ -14,11 +15,10 @@ class Config:
     def __init__(self):
         self.path = 'config.json'
         self.default = {
-            'IPV6': True,
             'AccessKeyID': '',
             'AccessKeySecret': '',
             'Domain': '',
-            'RR': ''
+            'Records': []
         }
         self.data = None
         self._check()
@@ -55,43 +55,63 @@ class Config:
         return self.get(key)
 
 
-def get_ip(ipv6=False):
-    if ipv6:
-        return requests.get('https://api6.ipify.org/?format=json').json()['ip']
-    else:
-        return requests.get('https://api4.ipify.org/?format=json').json()['ip']
+def get_ipv4():
+    return requests.get('https://api4.ipify.org/?format=json').json()['ip']
 
 
-def get_old_record(domain: str, RR: str, client: AcsClient):
+def get_ipv6():
+    return requests.get('https://api6.ipify.org/?format=json').json()['ip']
+
+
+def get_old_records(domain: str, client: AcsClient) -> List[dict]:
     request = DescribeDomainRecordsRequest.DescribeDomainRecordsRequest()
     request.set_accept_format('json')
-
     request.set_DomainName(domain)
-
     response = client.do_action_with_exception(request)
-    for i in json.loads(response)['DomainRecords']['Record']:
-        if i['RR'] == RR:
+    return json.loads(response)['DomainRecords']['Record']
+
+
+def get_old_record(records: List[dict], RR: str, type_: str) -> dict:
+    for i in records:
+        if i['RR'] == RR and i['Type'] == type_:
             return i
+
+
+def set_record(RR: str, type_: str, record_id: str, value: str,
+               client: AcsClient):
+    request = UpdateDomainRecordRequest.UpdateDomainRecordRequest()
+    request.set_accept_format('json')
+    request.set_RR(RR)
+    request.set_RecordId(record_id)
+    request.set_Type(type_)
+    request.set_Value(value)
+
+    print(json.loads(client.do_action_with_exception(request)))
 
 
 def main():
     config = Config()
     client = AcsClient(config['AccessKeyID'], config['AccessKeySecret'])
+    # 获取所有记录
+    old_records = get_old_records(config['Domain'], client)
 
-    old_record = get_old_record(config['Domain'], config['RR'], client)
-    ip = get_ip(config['IPV6'])
-    if old_record['Value'] == ip:
-        print('No changed')
-        return
-    request = UpdateDomainRecordRequest.UpdateDomainRecordRequest()
-    request.set_accept_format('json')
-
-    request.set_RR(config['RR'], )
-    request.set_RecordId(old_record['RecordId'])
-    request.set_Type('AAAA' if config['IPV6'] else 'A')
-    request.set_Value(ip)
-
-    print(json.loads(client.do_action_with_exception(request)))
+    # 遍历配置记录
+    for i in config['Records']:
+        # 获取匹配的记录
+        old_record = get_old_record(old_records, i['RR'], i['Type'])
+        # 获取IP
+        if i['Type'] == 'A':
+            ip = get_ipv4()
+        elif i['Type'] == 'AAAA':
+            ip = get_ipv6()
+        else:
+            continue
+        # 判断IP是否变化
+        if old_record['Value'] == ip:
+            print(f'Record "{i["RR"]}" Type {i["Type"]} has no change')
+        else:
+            # 设置新IP
+            set_record(i['RR'], i['Type'], old_record['RecordId'], ip, client)
 
 
 if __name__ == '__main__':
